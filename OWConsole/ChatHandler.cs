@@ -23,35 +23,25 @@ public class ChatHandler : MonoBehaviour
 
     void Awake()
     {
+        Application.logMessageReceived += this.OnLogMessageReceived;
+
         _board = new GameObject("Board");
         _board.transform.parent = gameObject.transform;
 
         var rt = _board.AddComponent<RectTransform>();
-        rt.sizeDelta = new Vector2(800, -680);
-        rt.localPosition = new Vector3(410, -332, 0);
+        rt.sizeDelta = new Vector2(800, -480);
+        rt.localPosition = new Vector3(410, -232, 0);
         rt.anchorMax = new Vector2(0, 1);
         rt.anchorMin = new Vector2(0, 0);
         rt.pivot = new Vector2(.5f, .5f);
         rt.localScale = Vector3.one;
 
-        Application.logMessageReceived += this.OnLogMessageReceived;
-
         _board.AddComponent<CanvasRenderer>();
         var ri = _board.AddComponent<RawImage>();
         ri.color = new Color32(0, 0, 0, 100);
 
-        SceneManager.sceneLoaded += SceneLoad;
+        SceneManager.sceneLoaded += (Scene scene, LoadSceneMode mode) => ResetLog();
     }
-
-    void SceneLoad(Scene scene, LoadSceneMode mode)
-    {
-        ResetLog();
-    }
-
-    //public void LogOWMLMod(string s)
-    //{
-    //    PostMessage(s, "OWML", MsgType.Log);
-    //}
 
     private void OnLogMessageReceived(string message, string stackTrace, LogType type)
     {
@@ -67,7 +57,6 @@ public class ChatHandler : MonoBehaviour
         {
             PostMessage(message, "Unity", MsgType.LOG);
         }
-        
     }
 
     public void ResetLog()
@@ -84,6 +73,11 @@ public class ChatHandler : MonoBehaviour
                 GameObject.Destroy(item.gameObject);
             }
         }
+    }
+
+    void HandleOWMLLog()
+    {
+        // Waiting for OWML update to implement
     }
 
     public void PostMessage(string message, string modName, MsgType type)
@@ -120,7 +114,7 @@ public class ChatHandler : MonoBehaviour
                     textC.fontSize = _fontSize + 5;
                     textC.text = "2";
                     textC.alignment = TextAnchor.MiddleRight;
-                    dupCount.transform.localPosition = new Vector3(300, 0, 0);
+                    dupCount.transform.localPosition = new Vector3(320, 0, 0);
                     dupCount.transform.localScale = Vector3.one;
                 }
                 else
@@ -133,10 +127,10 @@ public class ChatHandler : MonoBehaviour
             else if (!_collapsed || !duplicate)
             {
                 // Not collapsed or not a duplicate message.
-                if ((latestBox.GetComponent<RectTransform>().localPosition.y - 35) < -180) // If message goes off bottom of board...
+                if ((latestBox.GetComponent<RectTransform>().localPosition.y - 35) < -280) // If message goes off bottom of board...
                 {
-                    _boxList.RemoveAt(0); // Delete topmost message.
                     GameObject.Destroy(_boxList[0]);
+                    _boxList.RemoveAt(0); // Delete topmost message.
                     foreach (var item in _boxList) // Shift every message up.
                     {
                         item.GetComponent<RectTransform>().localPosition = new Vector3(0, item.GetComponent<RectTransform>().localPosition.y + 35, 0);
@@ -149,7 +143,7 @@ public class ChatHandler : MonoBehaviour
         }
         else
         {
-            box.GetComponent<RectTransform>().localPosition = new Vector3(0, 180, 0);
+            box.GetComponent<RectTransform>().localPosition = new Vector3(0, 280, 0);
             _boxList.Add(box);
         }
     }

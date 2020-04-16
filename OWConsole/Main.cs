@@ -14,24 +14,24 @@ namespace OWConsole
     {
         bool _loaded;
         bool _collapse;
+        bool _show;
 
         ChatHandler instance;
 
         public override void Configure(IModConfig config)
         {
-            _collapse = config.GetSettingsValue<bool>("collapse");
+            _collapse = config.GetSettingsValue<bool>("collapsed");
+            _show = config.GetSettingsValue<bool>("shown");
             if (instance != null)
             {
                 instance.ResetLog();
             }
+            instance.enabled = _show;
+            instance.gameObject.SetActive(_show);
         }
 
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Keypad0))
-            {
-                GameObject.FindObjectOfType<ChatHandler>().PostMessage("Console test!", ModHelper.Manifest.Name, ChatHandler.MsgType.ERROR);
-            }
             if (!_loaded)
             {
                 GameObject mainCanvas = new GameObject("MessageCanvas");
@@ -45,7 +45,6 @@ namespace OWConsole
                 var canvas = mainCanvas.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
                 canvas.sortingOrder = 9999;
-
 
                 mainCanvas.AddComponent<CanvasRenderer>();
 
@@ -65,6 +64,8 @@ namespace OWConsole
 
                 DontDestroyOnLoad(mainCanvas);
                 instance = GameObject.FindObjectOfType<ChatHandler>();
+
+                // Add callback to OWML
             }
             if (_collapse && !instance._collapsed)
             {
