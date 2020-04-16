@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -75,9 +76,12 @@ public class ChatHandler : MonoBehaviour
         }
     }
 
-    void HandleOWMLLog()
+    public void HandleOWMLLog(string message)
     {
-        // Waiting for OWML update to implement
+        if (!message.Contains("Unity log message:"))
+        {
+            PostMessage(message, "OWML", MsgType.LOG);
+        }
     }
 
     public void PostMessage(string message, string modName, MsgType type)
@@ -178,7 +182,7 @@ public class ChatHandler : MonoBehaviour
         var textC = words.AddComponent<Text>();
         textC.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
         textC.fontSize = _fontSize;
-        textC.text = "[" + mod + "] " + text;
+        textC.text = "[" + mod + "] : " + text;
         textC.alignment = TextAnchor.UpperLeft;
 
         if (type == MsgType.ERROR)

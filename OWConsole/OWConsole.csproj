@@ -86,6 +86,7 @@
   <ItemGroup>
     <Compile Include="ChatHandler.cs" />
     <Compile Include="Main.cs" />
+    <Compile Include="Patches.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

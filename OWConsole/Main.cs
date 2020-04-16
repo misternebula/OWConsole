@@ -17,6 +17,16 @@ namespace OWConsole
         bool _show;
 
         ChatHandler instance;
+        private bool doFinalSetup;
+        private static bool inputEnabled;
+
+        void Start()
+        {
+            foreach (var gameObj in GameObject.FindObjectsOfType(typeof(ModBehaviour)))
+            {
+
+            }
+        }
 
         public override void Configure(IModConfig config)
         {
@@ -25,13 +35,20 @@ namespace OWConsole
             if (instance != null)
             {
                 instance.ResetLog();
+                instance.enabled = _show;
+                instance.gameObject.SetActive(_show);
             }
-            instance.enabled = _show;
-            instance.gameObject.SetActive(_show);
         }
 
         void Update()
         {
+            if (doFinalSetup)
+            {
+                base.ModHelper.HarmonyHelper.AddPrefix(typeof(ModConsole).GetMethods().Where(m => m.Name == "WriteLine").ElementAt(0), typeof(Patches), "OWMLLogPrefix");
+                ModHelper.Console.WriteLine("[OWConsole] - OWML patch done.");
+                doFinalSetup = false;
+            }
+
             if (!_loaded)
             {
                 GameObject mainCanvas = new GameObject("MessageCanvas");
@@ -65,7 +82,7 @@ namespace OWConsole
                 DontDestroyOnLoad(mainCanvas);
                 instance = GameObject.FindObjectOfType<ChatHandler>();
 
-                // Add callback to OWML
+                doFinalSetup = true;
             }
             if (_collapse && !instance._collapsed)
             {
@@ -75,6 +92,15 @@ namespace OWConsole
             {
                 instance._collapsed = false;
             }
+        }
+        public static void MNActivateInput()
+        {
+            inputEnabled = true;
+        }
+
+        public static void MNDeactivateInput()
+        {
+            inputEnabled = false;
         }
     }
 }
