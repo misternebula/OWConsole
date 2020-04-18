@@ -76,14 +76,6 @@ public class ChatHandler : MonoBehaviour
         }
     }
 
-    public void HandleOWMLLog(string message)
-    {
-        if (!message.Contains("Unity log message:"))
-        {
-            PostMessage(message, "OWML", MsgType.LOG);
-        }
-    }
-
     public void PostMessage(string message, string modName, MsgType type)
     {
         var box = CreateBox(message, modName, type);

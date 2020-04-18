@@ -20,14 +20,6 @@ namespace OWConsole
         private bool doFinalSetup;
         private static bool inputEnabled;
 
-        void Start()
-        {
-            foreach (var gameObj in GameObject.FindObjectsOfType(typeof(ModBehaviour)))
-            {
-
-            }
-        }
-
         public override void Configure(IModConfig config)
         {
             _collapse = config.GetSettingsValue<bool>("collapsed");
@@ -42,13 +34,6 @@ namespace OWConsole
 
         void Update()
         {
-            if (doFinalSetup)
-            {
-                base.ModHelper.HarmonyHelper.AddPrefix(typeof(ModConsole).GetMethods().Where(m => m.Name == "WriteLine").ElementAt(0), typeof(Patches), "OWMLLogPrefix");
-                ModHelper.Console.WriteLine("[OWConsole] - OWML patch done.");
-                doFinalSetup = false;
-            }
-
             if (!_loaded)
             {
                 GameObject mainCanvas = new GameObject("MessageCanvas");
@@ -82,7 +67,7 @@ namespace OWConsole
                 DontDestroyOnLoad(mainCanvas);
                 instance = GameObject.FindObjectOfType<ChatHandler>();
 
-                doFinalSetup = true;
+                ModConsole.OnConsole += OnOWMLLog;
             }
             if (_collapse && !instance._collapsed)
             {
@@ -101,6 +86,14 @@ namespace OWConsole
         public static void MNDeactivateInput()
         {
             inputEnabled = false;
+        }
+
+        public void OnOWMLLog(IModManifest man, string message)
+        {
+            if (!message.Contains("Unity log message:"))
+            {
+                instance.PostMessage(message, man.Name, ChatHandler.MsgType.LOG);
+            }
         }
     }
 }
