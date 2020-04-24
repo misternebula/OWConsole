@@ -13,27 +13,23 @@ namespace OWConsole
     public class Main : ModBehaviour
     {
         bool _loaded;
-        bool _collapse;
-        bool _show;
 
         ChatHandler instance;
-        private bool doFinalSetup;
-        private static bool inputEnabled;
 
         public override void Configure(IModConfig config)
         {
-            _collapse = config.GetSettingsValue<bool>("collapsed");
-            _show = config.GetSettingsValue<bool>("shown");
             if (instance != null)
             {
                 instance.ResetLog();
-                instance.enabled = _show;
-                instance.gameObject.SetActive(_show);
             }
         }
 
         void Update()
         {
+            if (Input.GetKeyDown(KeyCode.Keypad0))
+            {
+                instance.PostMessage("this is a test", "OWConsole", ChatHandler.MsgType.ERROR);
+            }
             if (!_loaded)
             {
                 GameObject mainCanvas = new GameObject("MessageCanvas");
@@ -47,6 +43,7 @@ namespace OWConsole
                 var canvas = mainCanvas.AddComponent<Canvas>();
                 canvas.renderMode = RenderMode.ScreenSpaceOverlay;
                 canvas.sortingOrder = 9999;
+                canvas.pixelPerfect = true;
 
                 mainCanvas.AddComponent<CanvasRenderer>();
 
@@ -58,34 +55,18 @@ namespace OWConsole
                 cs.referencePixelsPerUnit = 100;
 
                 var ch = mainCanvas.AddComponent<ChatHandler>();
-                ch.helper = ModHelper;
+
+                var gr = mainCanvas.AddComponent<GraphicRaycaster>();
 
                 mainCanvas.SetActive(true);
 
                 _loaded = true;
 
+                ModConsole.OnConsole += OnOWMLLog;
+
                 DontDestroyOnLoad(mainCanvas);
                 instance = GameObject.FindObjectOfType<ChatHandler>();
-
-                ModConsole.OnConsole += OnOWMLLog;
             }
-            if (_collapse && !instance._collapsed)
-            {
-                instance._collapsed = true;
-            }
-            else if (!_collapse && instance._collapsed)
-            {
-                instance._collapsed = false;
-            }
-        }
-        public static void MNActivateInput()
-        {
-            inputEnabled = true;
-        }
-
-        public static void MNDeactivateInput()
-        {
-            inputEnabled = false;
         }
 
         public void OnOWMLLog(IModManifest man, string message)

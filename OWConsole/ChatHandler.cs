@@ -5,27 +5,30 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using static ChatHandler;
 
 public class ChatHandler : MonoBehaviour
 {
     List<GameObject> _boxList = new List<GameObject>();
 
-    public GameObject _board;
+    List<Message> _messages = new List<Message>();
 
-    public IModHelper helper;
+    GameObject _board;
 
-    public bool _shown;
-    public bool _collapsed;
+    GameObject _input;
 
-    public Vector2 _boxSize = new Vector2(790, 30);
-    public int _fontSize = 12;
+    Vector2 _boxSize = new Vector2(790, 30);
+    const int _fontSize = 12;
+
+    private Text _searchBox;
+
+    private string prevText;
 
     void Awake()
     {
-        Application.logMessageReceived += this.OnLogMessageReceived;
-
         _board = new GameObject("Board");
         _board.transform.parent = gameObject.transform;
 
@@ -37,11 +40,79 @@ public class ChatHandler : MonoBehaviour
         rt.pivot = new Vector2(.5f, .5f);
         rt.localScale = Vector3.one;
 
+        Application.logMessageReceived += this.OnLogMessageReceived;
+
         _board.AddComponent<CanvasRenderer>();
         var ri = _board.AddComponent<RawImage>();
         ri.color = new Color32(0, 0, 0, 100);
+        ri.raycastTarget = false;
 
-        SceneManager.sceneLoaded += (Scene scene, LoadSceneMode mode) => ResetLog();
+        var eventSys = new GameObject("EventSystem");
+        eventSys.transform.parent = _board.transform;
+
+        var sys = eventSys.AddComponent<EventSystem>();
+        sys.sendNavigationEvents = false;
+        sys.pixelDragThreshold = 10;
+
+        var input = eventSys.AddComponent<StandaloneInputModule>();
+        input.horizontalAxis = "Mouse_X";
+        input.verticalAxis = "Mouse_Y";
+        input.submitButton = "Joystick4Axis9";
+        input.cancelButton = "Joystick4Axis10";
+        input.inputActionsPerSecond = 10;
+        input.repeatDelay = 0.5f;
+        input.forceModuleActive = false;
+
+        _input = new GameObject("InputField");
+        _input.transform.parent = _board.transform;
+        var irt = _input.AddComponent<RectTransform>();
+        irt.sizeDelta = new Vector2(500, 30);
+        irt.localPosition = new Vector3(0, 320, 0);
+
+        irt.localScale = Vector3.one;
+
+        _input.AddComponent<CanvasRenderer>();
+
+        _input.AddComponent<Image>();
+
+        var placeholder = new GameObject("Placeholder");
+        placeholder.transform.parent = _input.transform;
+
+        var prt = placeholder.AddComponent<RectTransform>();
+        prt.anchorMax = new Vector2(1, 1);
+        prt.anchorMin = new Vector2(0, 0);
+        prt.pivot = new Vector2(.5f, .5f);
+        prt.sizeDelta = new Vector2(0, 0);
+        prt.transform.localPosition = Vector3.zero;
+        prt.transform.localScale = Vector3.one;
+
+        var text = placeholder.AddComponent<Text>();
+        text.text = "Enter text...";
+        text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        text.color = Color.black;
+
+        var textGO = new GameObject("Text");
+        textGO.transform.parent = _input.transform;
+
+        var trt = textGO.AddComponent<RectTransform>();
+        trt.anchorMax = new Vector2(1, 1);
+        trt.anchorMin = new Vector2(0, 0);
+        trt.pivot = new Vector2(.5f, .5f);
+        trt.sizeDelta = new Vector2(0, 0);
+        trt.transform.localPosition = Vector3.zero;
+        trt.transform.localScale = Vector3.one;
+
+        _searchBox = textGO.AddComponent<Text>();
+        _searchBox.text = "";
+        _searchBox.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        _searchBox.color = Color.black;
+
+        var inf = _input.AddComponent<InputField>();
+        inf.interactable = true;
+        inf.placeholder = text;
+        inf.textComponent = _searchBox;
+
+        SceneManager.sceneLoaded += (Scene scene, LoadSceneMode mod) => ResetLog();
     }
 
     private void OnLogMessageReceived(string message, string stackTrace, LogType type)
@@ -60,13 +131,26 @@ public class ChatHandler : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        if (_searchBox.text != prevText)
+        {
+            prevText = _searchBox.text;
+            DisplayMessages(prevText);
+        }
+    }
+
     public void ResetLog()
     {
+        
         foreach (var item in _boxList)
         {
             GameObject.Destroy(item);
         }
         _boxList = new List<GameObject>();
+
+        _messages = new List<Message>();
+
         foreach (var item in GameObject.FindObjectsOfType<RawImage>())
         {
             if (item.gameObject.name == "OWConsoleMessageBox")
@@ -76,75 +160,56 @@ public class ChatHandler : MonoBehaviour
         }
     }
 
-    public void PostMessage(string message, string modName, MsgType type)
+    private void DisplayMessages(string searchTerm = "")
     {
-        var box = CreateBox(message, modName, type);
-
-        if (_boxList.Count != 0)
+        foreach (var item in _boxList)
         {
-            GameObject latestBox = _boxList.Last(); // Get latest message
-            bool duplicate = false;
-            GameObject duplicatedObject = null;
+            Destroy(item);
+        }
+        _boxList = new List<GameObject>();
 
-            foreach (var item in _boxList)
-            {
-                if (box.GetComponentInChildren<Text>().text == item.GetComponentInChildren<Text>().text)
-                {
-                    duplicate = true;
-                    duplicatedObject = item;
-                }
-            }
+        List<Message> displayList = new List<Message>();
 
-            if (_collapsed && duplicate)
-            {
-                // Collapsed and a duplicate message.
-                var wordsObject = duplicatedObject.GetComponentInChildren<Text>().gameObject; // Gets the "Words" object.
-
-                if (wordsObject.transform.childCount == 0)
-                {
-                    GameObject dupCount = new GameObject("DuplicateCount");
-                    dupCount.transform.parent = wordsObject.transform;
-
-                    var textC = dupCount.AddComponent<Text>();
-                    textC.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                    textC.fontSize = _fontSize + 5;
-                    textC.text = "2";
-                    textC.alignment = TextAnchor.MiddleRight;
-                    dupCount.transform.localPosition = new Vector3(320, 0, 0);
-                    dupCount.transform.localScale = Vector3.one;
-                }
-                else
-                {
-                    wordsObject.transform.Find("DuplicateCount").GetComponent<Text>().text = (Int32.Parse(wordsObject.transform.Find("DuplicateCount").GetComponent<Text>().text) + 1).ToString();
-                }
-
-                GameObject.Destroy(box);
-            }
-            else if (!_collapsed || !duplicate)
-            {
-                // Not collapsed or not a duplicate message.
-                if ((latestBox.GetComponent<RectTransform>().localPosition.y - 35) < -280) // If message goes off bottom of board...
-                {
-                    GameObject.Destroy(_boxList[0]);
-                    _boxList.RemoveAt(0); // Delete topmost message.
-                    foreach (var item in _boxList) // Shift every message up.
-                    {
-                        item.GetComponent<RectTransform>().localPosition = new Vector3(0, item.GetComponent<RectTransform>().localPosition.y + 35, 0);
-                    }
-                }
-
-                box.GetComponent<RectTransform>().localPosition = new Vector3(0, latestBox.GetComponent<RectTransform>().localPosition.y - 35, 0); // Add message below last message.
-                _boxList.Add(box);
-            }
+        if (searchTerm == "")
+        {
+            displayList = _messages;
         }
         else
         {
-            box.GetComponent<RectTransform>().localPosition = new Vector3(0, 280, 0);
+            displayList = _messages.Where(x => x.Text.ToLower().Contains(searchTerm.ToLower())).ToList();
+        }
+
+        float lastYPos = 300;
+        foreach (var item in displayList.Skip(displayList.Count - 15).Take(15))
+        {
+            var box = CreateBox(item.Text, item.ModName, item.Type, item.DupCount);
+            box.GetComponent<RectTransform>().localPosition = new Vector3(0, lastYPos - 35, 0);
+            lastYPos -= 35;
             _boxList.Add(box);
         }
     }
 
-    GameObject CreateBox(string text, string mod, MsgType type)
+    public void PostMessage(string message, string modName, MsgType type)
+    {
+        bool dup = false;
+        foreach (Message msg in _messages)
+        {
+            if (msg.Text == message)
+            {
+                msg.DupCount += 1;
+                dup = true;
+            }
+        }
+
+        if (!dup)
+        {
+            _messages.Add(new Message { Text = message, ModName = modName, Type = type, DupCount = 0 });
+        }
+
+        DisplayMessages(_searchBox.text);
+    }
+
+    GameObject CreateBox(string text, string mod, MsgType type, int dupCount)
     {
         // Create dark message box
         GameObject box = new GameObject("OWConsoleMessageBox");
@@ -159,6 +224,7 @@ public class ChatHandler : MonoBehaviour
 
         var ri = box.AddComponent<RawImage>();
         ri.color = new Color32(0, 0, 0, 90);
+        ri.raycastTarget = false;
 
         // Create gameobject with text component
         GameObject words = new GameObject("Words");
@@ -197,4 +263,12 @@ public class ChatHandler : MonoBehaviour
         WARNING,
         CHAT
     }
+}
+
+class Message
+{
+    public string Text { get; set; }
+    public string ModName { get; set; }
+    public MsgType Type { get; set; }
+    public int DupCount { get; set; }
 }
