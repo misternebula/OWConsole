@@ -12,7 +12,7 @@ using static ChatHandler;
 
 public class ChatHandler : MonoBehaviour
 {
-    List<GameObject> _boxList = new List<GameObject>();
+    Dictionary<Message, GameObject> _boxList = new Dictionary<Message, GameObject>();
 
     List<Message> _messages = new List<Message>();
 
@@ -142,12 +142,12 @@ public class ChatHandler : MonoBehaviour
 
     public void ResetLog()
     {
-        
+
         foreach (var item in _boxList)
         {
-            GameObject.Destroy(item);
+            Destroy(item.Value);
         }
-        _boxList = new List<GameObject>();
+        _boxList.Clear();
 
         _messages = new List<Message>();
 
@@ -164,9 +164,9 @@ public class ChatHandler : MonoBehaviour
     {
         foreach (var item in _boxList)
         {
-            Destroy(item);
+            Destroy(item.Value);
         }
-        _boxList = new List<GameObject>();
+        _boxList.Clear();
 
         foreach (var item in GameObject.FindObjectsOfType<RawImage>())
         {
@@ -184,7 +184,13 @@ public class ChatHandler : MonoBehaviour
         }
         else
         {
-            displayList = _messages.Where(x => x.Text.ToLower().Contains(searchTerm.ToLower())).ToList();
+            foreach (var item in _messages)
+            {
+                if (item.Text.ToLower().Contains(searchTerm.ToLower()) || item.ModName.ToLower().Contains(searchTerm.ToLower()))
+                {
+                    displayList.Add(item);
+                }
+            }
         }
 
         float lastYPos = 300;
@@ -193,26 +199,23 @@ public class ChatHandler : MonoBehaviour
             var box = CreateBox(item.Text, item.ModName, item.Type, item.DupCount);
             box.GetComponent<RectTransform>().localPosition = new Vector3(0, lastYPos - 35, 0);
             lastYPos -= 35;
-            _boxList.Add(box);
+            _boxList.Add(item, box);
         }
     }
 
     public void PostMessage(string message, string modName, MsgType type)
     {
-        bool dup = false;
         foreach (Message msg in _messages)
         {
             if (msg.Text == message)
             {
                 msg.DupCount += 1;
-                dup = true;
+                _boxList[msg].transform.Find("Words").Find("DuplicateCount").GetComponent<Text>().text = msg.DupCount.ToString();
+                return;
             }
         }
 
-        if (!dup)
-        {
-            _messages.Add(new Message { Text = message, ModName = modName, Type = type, DupCount = 0 });
-        }
+        _messages.Add(new Message { Text = message, ModName = modName, Type = type, DupCount = 1 });
 
         DisplayMessages(_searchBox.text);
     }
@@ -261,6 +264,22 @@ public class ChatHandler : MonoBehaviour
             textC.color = Color.yellow;
         }
 
+        GameObject dup = new GameObject("DuplicateCount");
+        dup.transform.parent = words.transform;
+
+        var textD = dup.AddComponent<Text>();
+        textD.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        textD.fontSize = _fontSize + 5;
+
+        if (dupCount >= 2)
+        {
+            textD.text = dupCount.ToString();
+        }
+        
+        textD.alignment = TextAnchor.MiddleRight;
+        dup.transform.localPosition = new Vector3(320, 0, 0);
+        dup.transform.localScale = Vector3.one;
+
         return box;
     }
 
@@ -268,8 +287,7 @@ public class ChatHandler : MonoBehaviour
     {
         ERROR,
         LOG,
-        WARNING,
-        CHAT
+        WARNING
     }
 }
 
