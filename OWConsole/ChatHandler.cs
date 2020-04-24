@@ -180,15 +180,35 @@ public class ChatHandler : MonoBehaviour
 
         if (searchTerm == "")
         {
+
             displayList = _messages;
         }
         else
         {
             foreach (var item in _messages)
             {
-                if (item.Text.ToLower().Contains(searchTerm.ToLower()) || item.ModName.ToLower().Contains(searchTerm.ToLower()))
+                if (searchTerm.StartsWith("<error>"))
                 {
-                    displayList.Add(item);
+                    string searchText = searchTerm.Replace("<error>", "").Trim();
+                    if ((item.Text.ToLower().Contains(searchText) || item.ModName.ToLower().Contains(searchText)) && item.Type == MsgType.ERROR)
+                    {
+                        displayList.Add(item);
+                    }
+                }
+                else if (searchTerm.StartsWith("<warning>"))
+                {
+                    string searchText = searchTerm.Replace("<warning>", "").Trim();
+                    if ((item.Text.ToLower().Contains(searchText) || item.ModName.ToLower().Contains(searchText)) && item.Type == MsgType.WARNING)
+                    {
+                        displayList.Add(item);
+                    }
+                }
+                else
+                {
+                    if (item.Text.ToLower().Contains(searchTerm.ToLower()) || item.ModName.ToLower().Contains(searchTerm.ToLower()))
+                    {
+                        displayList.Add(item);
+                    }
                 }
             }
         }
