@@ -26,10 +26,6 @@ namespace OWConsole
 
         void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Keypad0))
-            {
-                instance.PostMessage("this is a test", "OWConsole", ChatHandler.MsgType.ERROR);
-            }
             if (!_loaded)
             {
                 GameObject mainCanvas = new GameObject("MessageCanvas");

@@ -168,6 +168,14 @@ public class ChatHandler : MonoBehaviour
         }
         _boxList = new List<GameObject>();
 
+        foreach (var item in GameObject.FindObjectsOfType<RawImage>())
+        {
+            if (item.gameObject.name == "OWConsoleMessageBox")
+            {
+                GameObject.Destroy(item.gameObject);
+            }
+        }
+
         List<Message> displayList = new List<Message>();
 
         if (searchTerm == "")
